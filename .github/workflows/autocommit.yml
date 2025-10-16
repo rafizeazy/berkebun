@@ -6,7 +6,7 @@ on:
       - main
 
   schedule:
-    - cron: '0 16 * * 1' # See https://crontab.guru/#0_4,12,15,18,19_*_*_*
+    - cron: '0 16 * * 1' # setiap Senin 16:00 UTC
 
 jobs:
   auto_commit:
@@ -17,17 +17,33 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
+      # ✅ Randomizer step
+      - name: Decide whether to commit
+        id: randomizer
+        run: |
+          # Angka acak 0–9
+          num=$((RANDOM % 10))
+          echo "Random number: $num"
+          # Hanya lanjut commit jika num < 4 (artinya 40% chance)
+          if [ $num -lt 4 ]; then
+            echo "should_commit=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_commit=false" >> $GITHUB_OUTPUT
+          fi
+
+      # ✅ Modify file only if should_commit == true
       - name: Modify Last Update
+        if: steps.randomizer.outputs.should_commit == 'true'
         run: |
           d=`date '+%Y-%m-%dT%H:%M:%SZ'`
           echo $d > LAST_UPDATED
 
       - name: Commit Changes
+        if: steps.randomizer.outputs.should_commit == 'true'
         run: |
           git config --local user.name "rafizeazy"
           git config --local user.email "rafi.imanullah.stmik@krw.horizon.ac.id"
           git add -A
-
           arr[0]="chore(bot): 🔥 auto commit"
           arr[1]="chore(bot): 💀 auto commit"
           arr[2]="chore(bot): 👹 auto commit"
@@ -38,12 +54,11 @@ jobs:
           arr[7]="chore(bot): 🤖 auto commit"
           arr[8]="chore(bot): 👾 auto commit"
           arr[9]="chore(bot): 😈 auto commit"
-
           rand=$[$RANDOM % ${#arr[@]}]
-
           git commit -m "${arr[$rand]}"
 
       - name: GitHub Push
+        if: steps.randomizer.outputs.should_commit == 'true'
         uses: ad-m/github-push-action@master
         with:
           force: true
